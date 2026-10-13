@@ -35,7 +35,7 @@ Set repository variables:
 - AWS_PLAN_ROLE_ARN: scoped plan role ARN
 - AWS_APPLY_ROLE_ARN: scoped apply role ARN
 
-Set ENVIRONMENT_READ_TOKEN as an Actions secret: a fine-grained GitHub token for this repository with Environments: read, used only to verify the required-reviewer gate exists. Never put it in a file. Workflow deliberately fails if the gate is missing.
+The workflow uses the built-in GitHub token to read the public repository environment and verify that a required-reviewer gate exists. No personal access token is required. Workflow deliberately fails if the gate is missing.
 
 ## 3. Deploy
 Push the source to main. Open Actions, review plan.txt in the plan artifact and approve the production deployment. Apply consumes that exact saved binary plan; it does not re-plan. Copy the application_url from Terraform Outputs. Validation checks running EC2, EIP, VPC, two subnets, HTTP-only ingress, IAM role/profile, S3 protections and page content.
