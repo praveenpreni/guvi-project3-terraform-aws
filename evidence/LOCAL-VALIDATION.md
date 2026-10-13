@@ -1,14 +1,16 @@
-# Local verification — 13 October 2026
+# Verification - 13 October 2026
 
-- Terraform 1.14.7: recursive format check passed.
-- AWS provider 6.68.0 initialized from HashiCorp with signed checksums.
-- Root Terraform configuration: validate passed.
-- Bootstrap Terraform configuration: validate passed.
-- Root lock file includes Linux amd64 and Windows amd64 provider checksums.
-- Workflow YAML parsed successfully; plan/apply jobs and production environment reference verified.
-- Shell syntax checks could not run because the local Bash runtime was blocked by the Windows sandbox; scripts still need runner verification.
-- Live Terraform plan/apply not run. AWS and HTTP validation not run.
-- AWS Console CloudShell reports account verification in progress and cannot create its environment.
-- No deployment evidence, application URL or submission receipt exists yet.
+- Terraform 1.14.7 recursive format check passed.
+- Root and bootstrap Terraform validate passed.
+- AWS provider 6.68.0 initialized using official signed checksums.
+- Provider lock includes Windows amd64 and Linux amd64 checksums.
+- Workflow YAML parsed successfully.
+- GitHub Actions run #5 (38372265918), deployed commit 97256cf, succeeded after push.
+- Plan job: format, environment protection check, OIDC, backend init, validate, saved plan and artifact upload succeeded.
+- Apply job: production approval, OIDC, backend init, saved artifact download/checksum verification, apply, outputs and infrastructure validation succeeded.
+- Runner validation checks EC2 status/IP/IMDSv2, VPC/subnets, EIP, inbound HTTP rule, IAM profile, S3 versioning/encryption/public access and HTTP landing page.
+- AWS Console evidence confirms the deployed infrastructure; browser shows the custom application through the Elastic IP.
+- Native S3 lockfile is enabled. An unlocked backend normally retains terraform.tfstate without a lock object.
+- Submission is pending owner action.
 
-Local validation verifies schema and configuration consistency; it does not establish AWS permissions, available capacity or successful deployment.
+https://github.com/praveenpreni/guvi-project3-terraform-aws/actions/runs/38372265918
