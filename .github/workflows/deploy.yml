@@ -52,6 +52,8 @@ jobs:
           terraform plan -lock-timeout=5m -out=deployment.tfplan
           terraform show -no-color deployment.tfplan > plan.txt
           sha256sum deployment.tfplan > deployment.tfplan.sha256
+          echo '### Planned resource changes' >> "$GITHUB_STEP_SUMMARY"
+          terraform show -json deployment.tfplan | jq -r '[.resource_changes[] | select(.mode == "managed")] | group_by(.type) | .[] | "\(.[0].type): \(length) resource(s), actions \([.[].change.actions[]] | unique | join(", "))"' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-${{ github.run_id }}
