@@ -1,0 +1,104 @@
+name: Terraform deployment
+on:
+  push:
+    branches: [main]
+    paths: ['**.tf', 'modules/**', '.github/workflows/**', 'scripts/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+concurrency:
+  group: terraform-project3-dev
+  cancel-in-progress: false
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+  TF_VAR_aws_region: ${{ vars.AWS_REGION || 'ap-south-1' }}
+  TF_VAR_environment: dev
+jobs:
+  plan:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.7
+          terraform_wrapper: false
+      - name: Terraform Format
+        run: terraform fmt -check -recursive
+      - name: Verify manual approval configuration
+        env:
+          GH_TOKEN: ${{ secrets.ENVIRONMENT_READ_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "Configure ENVIRONMENT_READ_TOKEN (repository Environments: read)."; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/environments/production" > /tmp/environment.json
+          jq -e '[.protection_rules[] | select(.type == "required_reviewers") | .reviewers[]] | length > 0' /tmp/environment.json
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Terraform Init
+        env:
+          STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: |
+          test -n "$STATE_BUCKET"
+          terraform init -backend-config="bucket=$STATE_BUCKET" -backend-config="key=project3/dev/terraform.tfstate" -backend-config="region=$AWS_REGION" -backend-config="encrypt=true" -backend-config="use_lockfile=true"
+      - name: Terraform Validate
+        run: terraform validate
+      - name: Terraform Plan
+        run: |
+          terraform plan -lock-timeout=5m -out=deployment.tfplan
+          terraform show -no-color deployment.tfplan > plan.txt
+          sha256sum deployment.tfplan > deployment.tfplan.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ github.run_id }}
+          path: |
+            deployment.tfplan
+            deployment.tfplan.sha256
+            plan.txt
+          retention-days: 7
+          if-no-files-found: error
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.7
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Terraform Init
+        env:
+          STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: terraform init -lockfile=readonly -backend-config="bucket=$STATE_BUCKET" -backend-config="key=project3/dev/terraform.tfstate" -backend-config="region=$AWS_REGION" -backend-config="encrypt=true" -backend-config="use_lockfile=true"
+      - uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-${{ github.run_id }}
+      - name: Apply approved plan
+        run: |
+          sha256sum -c deployment.tfplan.sha256
+          terraform apply -lock-timeout=5m deployment.tfplan
+      - name: Terraform Outputs
+        run: |
+          terraform output
+          terraform output -json > outputs.json
+          { echo '### Terraform deployment'; terraform output; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Infrastructure Validation
+        run: bash scripts/validate.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-evidence-${{ github.run_id }}
+          path: |
+            outputs.json
+            validation.log
+          if-no-files-found: warn
