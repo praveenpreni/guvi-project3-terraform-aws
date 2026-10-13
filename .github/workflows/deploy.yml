@@ -31,9 +31,8 @@ jobs:
         run: terraform fmt -check -recursive
       - name: Verify manual approval configuration
         env:
-          GH_TOKEN: ${{ secrets.ENVIRONMENT_READ_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          test -n "$GH_TOKEN" || { echo "Configure ENVIRONMENT_READ_TOKEN (repository Environments: read)."; exit 1; }
           gh api "repos/$GITHUB_REPOSITORY/environments/production" > /tmp/environment.json
           jq -e '[.protection_rules[] | select(.type == "required_reviewers") | .reviewers[]] | length > 0' /tmp/environment.json
       - uses: aws-actions/configure-aws-credentials@v4
