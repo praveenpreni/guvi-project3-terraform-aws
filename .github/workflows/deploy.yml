@@ -56,7 +56,7 @@ jobs:
           terraform show -json deployment.tfplan | jq -r '[.resource_changes[] | select(.mode == "managed")] | group_by(.type) | .[] | "\(.[0].type): \(length) resource(s), actions \([.[].change.actions[]] | unique | join(", "))"' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: terraform-plan-${{ github.run_id }}
+          name: terraform-plan-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             deployment.tfplan
             deployment.tfplan.sha256
@@ -83,7 +83,7 @@ jobs:
         run: terraform init -lockfile=readonly -backend-config="bucket=$STATE_BUCKET" -backend-config="key=project3/dev/terraform.tfstate" -backend-config="region=$AWS_REGION" -backend-config="encrypt=true" -backend-config="use_lockfile=true"
       - uses: actions/download-artifact@v4
         with:
-          name: terraform-plan-${{ github.run_id }}
+          name: terraform-plan-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Apply approved plan
         run: |
           sha256sum -c deployment.tfplan.sha256
@@ -98,7 +98,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: deployment-evidence-${{ github.run_id }}
+          name: deployment-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             outputs.json
             validation.log
