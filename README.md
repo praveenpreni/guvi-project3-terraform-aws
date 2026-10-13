@@ -14,6 +14,8 @@ Only inbound HTTP port 80 is open. No SSH or embedded credentials. IMDSv2 is req
 State and plan files can contain sensitive information. State is private, encrypted and versioned in S3; native S3 locking uses use_lockfile=true (Terraform 1.10+). Plans stay in short-lived Actions artifacts and must not be committed. Commit the generated .terraform.lock.hcl files.
 
 ## 1. Bootstrap remote state
+Alternative when CloudShell is unavailable: create a CloudFormation stack from bootstrap/foundation-cloudformation.json in Mumbai. It creates the state bucket, GitHub OIDC provider and separate plan/apply roles for this repository. Set the repository variables from the stack outputs. Do not also create the same state bucket with the Terraform bootstrap configuration. The foundation grants selected EC2 write operations within Mumbai, with IAM and S3 writes restricted to the project names.
+
 Using an authorized AWS session (AWS CloudShell is suitable), install Terraform from the official HashiCorp release and authenticate through the session credentials.
 ```bash
 terraform -chdir=bootstrap init
@@ -27,7 +29,7 @@ Create a GitHub repository with main as its default branch. For GitHub Free, use
 
 Create the production environment, add a required reviewer, restrict deployment to main and disable administrator bypass. For a solo project, allow self-review so you can approve the run.
 
-Use AWS OIDC, with issuer https://token.actions.githubusercontent.com and audience sts.amazonaws.com. Scope the plan role trust subject to repo:OWNER/REPO:ref:refs/heads/main and apply role trust to repo:OWNER/REPO:environment:production. Do not use a wildcard repository trust. A project-specific deploy role needs the EC2, S3 and IAM operations for these resources; restrict IAM PassRole to guvi-project3-dev-ec2 and restrict IAM/S3 writes to project resources. The plan role needs read/list access and remote-state lock-file writes. The apply role also needs the read operations used by scripts/validate.sh. Account-specific role policies must be reviewed and configured before deployment.
+Use AWS OIDC, with issuer https://token.actions.githubusercontent.com and audience sts.amazonaws.com. Scope the plan role trust subject to repo:OWNER@OWNER_ID/REPO@REPO_ID:ref:refs/heads/main and apply role trust to repo:OWNER@OWNER_ID/REPO@REPO_ID:environment:production. Do not use a wildcard repository trust. A project-specific deploy role needs the EC2, S3 and IAM operations for these resources; restrict IAM PassRole to guvi-project3-dev-ec2 and restrict IAM/S3 writes to project resources. The plan role needs read/list access and remote-state lock-file writes. The apply role also needs the read operations used by scripts/validate.sh. Account-specific role policies must be reviewed and configured before deployment.
 
 Set repository variables:
 - AWS_REGION: ap-south-1 (or your selected region)
@@ -52,3 +54,5 @@ EC2, EBS, public IPv4 and S3 can incur charges. After grading, review terraform 
 ## References
 - [Terraform S3 backend and native locking](https://developer.hashicorp.com/terraform/language/backend/s3)
 - [GitHub deployment review](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/review-deployments)
+
+New GitHub repositories use immutable OIDC subject IDs. Obtain owner_id and repository id from the GitHub repository API and match both IDs in the trust policy. See https://docs.github.com/en/actions/reference/security/oidc#immutable-subject-claims.
