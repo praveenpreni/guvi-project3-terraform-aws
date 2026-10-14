@@ -39,9 +39,9 @@ jobs:
           terraform plan -destroy -lock-timeout=5m -out=destroy.tfplan
           terraform show -no-color destroy.tfplan > destroy-plan.txt
           terraform show -json destroy.tfplan > /tmp/destroy.json
-          jq -e 'all(.resource_changes[]; (.change.actions == ["delete"] or .change.actions == ["no-op"]))' /tmp/destroy.json
-          jq -e 'any(.resource_changes[]; .type == "aws_instance" and .change.before.id == "i-0e85ac8e48c4dfe3c")' /tmp/destroy.json
-          jq -e 'any(.resource_changes[]; .type == "aws_vpc" and .change.before.id == "vpc-0e32795f6dc58823d")' /tmp/destroy.json
+          jq -e 'all(.resource_changes[]?; (.change.actions == ["delete"] or .change.actions == ["no-op"]))' /tmp/destroy.json
+          jq -e 'all(.resource_changes[]?; .type != "aws_instance" or .change.before.id == "i-0e85ac8e48c4dfe3c")' /tmp/destroy.json
+          jq -e 'all(.resource_changes[]?; .type != "aws_vpc" or .change.before.id == "vpc-0e32795f6dc58823d")' /tmp/destroy.json
           sha256sum destroy.tfplan > destroy.tfplan.sha256
           echo '### Project 3 deletion plan' >> "$GITHUB_STEP_SUMMARY"
           jq -r '.resource_changes[] | select(.change.actions == ["delete"]) | .address' /tmp/destroy.json >> "$GITHUB_STEP_SUMMARY"
