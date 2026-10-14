@@ -1,14 +1,12 @@
 # Project 3 — AWS infrastructure with Terraform and GitHub Actions
 
 ## Status
-Deployment completed on 13 October 2026 in AWS Mumbai (ap-south-1). GitHub Actions run #5 passed both plan and apply, including AWS/HTTP validation. Deployment commit: `97256cf`.
+Decommissioned on 14 October 2026 after project review was completed. The 22 Terraform-managed application resources and the bootstrap foundation have been removed. The state and template buckets were emptied and deleted. Deployment and cleanup workflows are disabled.
 
-- Repository: https://github.com/praveenpreni/guvi-project3-terraform-aws
-- Successful push-triggered run: https://github.com/praveenpreni/guvi-project3-terraform-aws/actions/runs/38372265918
-- Live application: http://13.233.49.230
-- Remote state: private S3 bucket, key `project3/dev/terraform.tfstate`, with native S3 locking.
+The deployment evidence documents the successful implementation on 13 October 2026; its former application IP has been released and is no longer an active project endpoint.
 
-The owner will submit the report to GUVI. Submission has not been performed.
+- Successful deployment: https://github.com/praveenpreni/guvi-project3-terraform-aws/actions/runs/38372265918
+- Completed Terraform cleanup: https://github.com/praveenpreni/guvi-project3-terraform-aws/actions/runs/38574291203
 
 ## Architecture
 GitHub push → format → init → validate → saved plan artifact → production environment approval → apply saved plan → outputs → AWS and HTTP validation.
